@@ -1,64 +1,100 @@
-import java.util.HashMap;
-import java.util.Map;
 import java.util.HashSet;
 
-public class Main {
-
-    public static int solution(int[]X , int[] Y) {
-         int n = X.length;
-        HashSet<String> diamonds = new HashSet<>();
-
+class Solution {
+    public int solution(int[] X, int[] Y) {
+        int n = X.length;
+        HashSet<String> uniqueDiamonds = new HashSet<>();
+        
+        // Create a hashset of points for O(1) lookup
+        HashSet<String> points = new HashSet<>();
+        for (int i = 0; i < n; i++) {
+            points.add(X[i] + "," + Y[i]);
+        }
+        
+        // Check every pair of points as potential opposite corners of a diamond
         for (int i = 0; i < n; i++) {
             for (int j = i + 1; j < n; j++) {
-                for (int k = j + 1; k < n; k++) {
-                    for (int l = k + 1; l < n; l++) {
-                        if (isDiamond(X[i], Y[i], X[j], Y[j], X[k], Y[k], X[l], Y[l])) {
-                            String diamond = getDiamondString(X[i], Y[i], X[j], Y[j], X[k], Y[k], X[l], Y[l]);
-                            diamonds.add(diamond);
-                        }
-                    }
+                // Only consider pairs that could form a diamond's diagonal
+                // Centers of diamonds must have integer coordinates (average of opposite corners)
+                if ((X[i] + X[j]) % 2 != 0 || (Y[i] + Y[j]) % 2 != 0) {
+                    continue;
+                }
+                
+                // Calculate center of potential diamond
+                int centerX = (X[i] + X[j]) / 2;
+                int centerY = (Y[i] + Y[j]) / 2;
+                
+                // Vector from center to point i
+                int vectorX = X[i] - centerX;
+                int vectorY = Y[i] - centerY;
+                
+                // Calculate other two corners of diamond by rotating the vector 90 degrees
+                // Rotation matrix for 90 degrees: (x,y) -> (-y,x)
+                int corner1X = centerX - vectorY;
+                int corner1Y = centerY + vectorX;
+                
+                // Rotation matrix for -90 degrees: (x,y) -> (y,-x)
+                int corner2X = centerX + vectorY;
+                int corner2Y = centerY - vectorX;
+                
+                // Check if the other two corners exist in our point set
+                if (points.contains(corner1X + "," + corner1Y) && 
+                    points.contains(corner2X + "," + corner2Y)) {
+                    
+                    // Found a diamond - add it to our set of unique diamonds
+                    // Sort the coordinates for consistent representation
+                    int[] xCoords = {X[i], X[j], corner1X, corner2X};
+                    int[] yCoords = {Y[i], Y[j], corner1Y, corner2Y};
+                    
+                    String diamond = getSortedDiamondString(xCoords, yCoords);
+                    uniqueDiamonds.add(diamond);
                 }
             }
         }
-
-        return diamonds.size();
+        
+        return uniqueDiamonds.size();
     }
-
-    private static boolean isDiamond(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4) {
-        int d1 = distanceSquared(x1, y1, x2, y2);
-        int d2 = distanceSquared(x2, y2, x3, y3);
-        int d3 = distanceSquared(x3, y3, x4, y4);
-        int d4 = distanceSquared(x4, y4, x1, y1);
-        int d5 = distanceSquared(x1, y1, x3, y3);
-        int d6 = distanceSquared(x2, y2, x4, y4);
-
-        return d1 == d3 && d2 == d4 && d5 == d6;
-    }
-
-    private static int distanceSquared(int x1, int y1, int x2, int y2) {
-        return (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
-    }
-
-    private static String getDiamondString(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4) {
-        int[] xs = {x1, x2, x3, x4};
-        int[] ys = {y1, y2, y3, y4};
+    
+    // Helper method to get a consistent string representation of a diamond
+    private String getSortedDiamondString(int[] x, int[] y) {
+        // Sort points by x, then y for consistent representation
+        for (int i = 0; i < 4; i++) {
+            for (int j = i + 1; j < 4; j++) {
+                if (x[i] > x[j] || (x[i] == x[j] && y[i] > y[j])) {
+                    // Swap
+                    int tempX = x[i];
+                    int tempY = y[i];
+                    x[i] = x[j];
+                    y[i] = y[j];
+                    x[j] = tempX;
+                    y[j] = tempY;
+                }
+            }
+        }
+        
+        // Create a string representation with points in sorted order
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 4; i++) {
-            sb.append(xs[i]).append(",").append(ys[i]).append(";");
+            if (i > 0) sb.append(";");
+            sb.append(x[i]).append(",").append(y[i]);
         }
         return sb.toString();
     }
+}
 
-
+// Main class to test the solution
+public class Main {
     public static void main(String[] args) {
-        // First example: Should output 3
-        int[] X1 = {1, 2, 3, 3, 2, 1};
-        int[] Y1 = {1, 2, 3, 3, 2, 1};
-        System.out.println("Number of diamonds (example 1): " + solution(X1, Y1)); // Output: 3
-
-        // Second example: Should output 2
-        int[] X2 = {1, 1, 2, 2, 2, 3, 3};
-        int[] Y2 = {3, 4, 1, 3, 5, 3, 4};
-        System.out.println("Number of diamonds (example 2): " + solution(X2, Y2)); // Output: 2
+        Solution solution = new Solution();
+        
+        // Example 1: Should return 2
+        int[] X1 = {1, 1, 2, 2, 2, 3, 3};
+        int[] Y1 = {3, 4, 1, 3, 5, 3, 4};
+        System.out.println("Example 1 output: " + solution.solution(X1, Y1));
+        
+        // Example 2: Should return 0
+        int[] X2 = {1, 2, 3, 3, 2, 1};
+        int[] Y2 = {1, 1, 1, 2, 2, 2};
+        System.out.println("Example 2 output: " + solution.solution(X2, Y2));
     }
 }
